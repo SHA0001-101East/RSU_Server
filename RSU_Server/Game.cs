@@ -17,6 +17,7 @@ namespace RSU_Server
         public const float defaultTroopCount = 25f;
         public const float defaultStartingTroops = 500f;
         public const int neutralTeam = -1;
+        public int uniqueBlobIndex = 0;
 
         public int nodesInRow = 10; public float radiusOfNode = 5; //probably should make this variable something to collect in the future
         public float distanceBetweenNodes = 3f; public float shakeFactor = 1f; private float startingXValue = 0f; private float startingYValue = 0f;
@@ -26,6 +27,7 @@ namespace RSU_Server
         public bool[,] adjacencyMatrix;
         public int[][] connections;
         public List<GameAction> gameActions = new List<GameAction>();
+        public IDictionary<int, Blob> blobIDPairs = new Dictionary<int, Blob>();
 
         public void CreateMap()
         {
@@ -181,14 +183,36 @@ namespace RSU_Server
                             {
                                 Node mNode = nodes[mGameAction.node];
 
-                                //----------------------------FOR WHEN YOU WAKE UP-------------------------------------//
-                                //IMPLEMENT PATH FINDING ALGORITHM
-                                //ADD DESTINATION NODE TO GAMEACTION CLASS
-
                                 //checks if node has enough troops
+                                if (mNode.teamDictionary[mGameAction.team].troops < mGameAction.troops)
+                                {
+                                    //not enough troops exist
+                                    break;
+                                }
+
                                 //checks if the node it wants to move to is a valid node
-                                //create blob class
-                                //instantiate blob class with team, path array and speed
+                                int[] path = FindPath(mGameAction.node, mGameAction.destinationNode, mGameAction.team);
+                                if (path == null)
+                                {
+                                    break; //troops arent able to move there
+                                }
+
+                                int blobID = GenerateBlobID();
+                                blobIDPairs.Add(blobID, new Blob(this, path, mGameAction.troops, mGameAction.team)); //creates blob
+                                //make sure to send the player the blob ID
+                                mNode.teamDictionary[mGameAction.team].troops = mNode.teamDictionary[mGameAction.team].troops - mGameAction.troops;
+                                break;
+                            }
+
+                        case GameAction.retreatAction:
+                            {
+                                //check team XDDDDDD
+                                if (!blobIDPairs.ContainsKey(mGameAction.blobID))
+                                {
+                                    break; //invalid blob ID
+                                }
+
+                                blobIDPairs[mGameAction.blobID].Retreat();
                                 break;
                             }
                     }
@@ -259,6 +283,12 @@ namespace RSU_Server
                 nodes[nUpdate].teamDictionary[team].production = prod;
                 nodes[nUpdate].teamDictionary[team].artillery = artillery;
             }
+        }
+
+        public int GenerateBlobID()
+        {
+            uniqueBlobIndex++;
+            return uniqueBlobIndex;
         }
 
         int[] FindPath(int startingNode, int destinationNode, int team)
@@ -370,6 +400,7 @@ namespace RSU_Server
         public int destinationNode;
         public int building;
         public int troops;
+        public int blobID;
 
         //retreat stuff
         //possible hashing
@@ -388,6 +419,12 @@ namespace RSU_Server
             node = node1;
             destinationNode = destination1;
             troops = troops1;
+        }
+
+        public void Retreat(int team1, int blobID1)
+        {
+            team = team1;
+            blobID = blobID1;
         }
     }
 }
