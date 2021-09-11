@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Collections.Generic;
 
 namespace RSU_Server
 {
@@ -16,6 +16,15 @@ namespace RSU_Server
         public static string name = "Server";
         public static bool inGame = false;
 
+        public const int Client_Token = 1;
+        public const int Server_AckVerfication = 2;
+        public const int Client_Name = 3;
+        public const int Server_PlayersInfo = 4;
+        public const int Client_RequestMap = 5;
+        public const int Server_SendMap = 6;
+        public const int All_Message = 7;
+        public const int Server_SpawnInt = 9;
+
         static void Main(string[] args)
         {
             Console.WriteLine("Creating Local Server...");
@@ -28,7 +37,7 @@ namespace RSU_Server
             game = new Game(); //creates an instance of the game class to run the game off
 
             clients = new Client[maxClients]; //remember that the is already connected
-            //game.CreateMap();
+            game.CreateMap();
 
             StartServer();
             //game.InitialiseAndSpawn();
@@ -44,6 +53,8 @@ namespace RSU_Server
             Console.WriteLine("Waiting for a connection...");
 
             socket.BeginAccept(new AsyncCallback(TPCCallback), null);
+
+            Console.ReadLine();
         }
 
 
@@ -79,6 +90,28 @@ namespace RSU_Server
                 }
             }
             return -1;
+        }
+
+        public static void CheckForTimeouts()
+        {
+            List<int> delete = new List<int>();
+
+            for (int i = 0; i < clients.Length; i++)
+            {
+                TimeSpan dt = DateTime.Now - clients[i].timeOut_initialTime;
+                if (dt.TotalMilliseconds >= 5000)
+                {
+                    delete.Add(i);
+                }
+            }
+
+            //delete clients
+            for (int i = 0; i < delete.Count; i++)
+            {
+                //should implement IDisposable
+                clients[delete[i]].DisconnectClient();
+                clients[delete[i]] = null;
+            }
         }
     }
 }

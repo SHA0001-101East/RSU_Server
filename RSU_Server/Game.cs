@@ -22,14 +22,13 @@ namespace RSU_Server
         public int nodesInRow = 10; public float radiusOfNode = 5; //probably should make this variable something to collect in the future
         public float distanceBetweenNodes = 3f; public float shakeFactor = 1f; private float startingXValue = 0f; private float startingYValue = 0f;
         public int count;
+        public int[][] connections;
 
         public Node[] nodes;
-        public bool[,] adjacencyMatrix;
-        public int[][] connections;
         public List<GameAction> gameActions = new List<GameAction>();
         public IDictionary<int, Blob> blobIDPairs = new Dictionary<int, Blob>();
 
-        public void CreateMap()
+        public void CreateMap() //this idea is by mumisa
         {
             Console.WriteLine("Creating Map.");
 
@@ -55,83 +54,56 @@ namespace RSU_Server
             }
 
             Console.WriteLine("Map Created!");
-            AdjMatrix();
             InitialiseConnectionsArray();
         }
-
-        #region Initialisation Stuff
 
         void InitialiseConnectionsArray()
         {
             connections = new int[count][];
-            List<int> list;
-            for (int i = 0; i < count; i++)
-            {
-                list = new List<int>();
+            List<int> connects = new List<int>();
 
-                for (int j = 0; j < count; j++)
-                {
-                    if (adjacencyMatrix[i, j])
-                    {
-                        list.Add(j);
-                    }
-                }
-                connections[i] = list.ToArray();
-            }
-        }
-
-        void AdjMatrix()
-        {
-            bool[,] adjMatrix = new bool[nodes.Length, nodes.Length];
             float distanceToNodes;
-
             for (int i = 0; i < nodes.Length; i++)
             {
                 for (int j = 0; j < nodes.Length; j++)
                 {
                     distanceToNodes = Vector3.Distance(nodes[i].position, nodes[j].position);
-
                     if (distanceToNodes < radiusOfNode && distanceToNodes != 0)
                     {
-                        adjMatrix[i, j] = true;
+                        connects.Add(j);
                     }
                 }
+
+                connections[i] = connects.ToArray();
+                connects.Clear();
             }
 
             //creates connections for any node with connections less than 3
-            for (int w = 0; w < nodes.Length; w++)
+            for (int i = 0; i < nodes.Length; i++)
             {
-                float connections = 0;
-
-                for (int k = 0; k < nodes.Length; k++)
-                {
-                    if (adjMatrix[w, k] == true) { connections += 1; }
-                }
-
-                if (connections < 3)
+                if (connections[i].Length < 3)
                 {
                     List<int> sortList = new List<int>();
-
-                    for (int i = 0; i < nodes.Length; i++)
+                    for (int j = 0; j < nodes.Length; j++)
                     {
-                        sortList.Add(i);
+                        sortList.Add(j);
                     }
 
-                    sortList = sortList.OrderBy(x => Vector3.Distance(nodes[w].position, nodes[x].position)).ToList();
+                    sortList = sortList.OrderBy(x => Vector3.Distance(nodes[i].position, nodes[x].position)).ToList();
 
-                    for (int kebab = 1; kebab < 4; kebab++)
+                    connections[i] = new int[3];
+
+                    for (int k = 1; k < 4; k++)
                     {
-                        adjMatrix[w, sortList[kebab]] = true;
-                        adjMatrix[sortList[kebab], w] = true;
+                        connections[i][k - 1] = sortList[k];
+                        List<int> list = new List<int>(connections[sortList[k]]);
+                        list.Add(i);
+                        connections[sortList[k]] = list.ToArray();
                     }
 
                 }
             }
-
-            adjacencyMatrix = adjMatrix;
         }
-
-        #endregion
 
         public void StartGame()
         {
@@ -149,12 +121,7 @@ namespace RSU_Server
 
             //checks if there are any actions to do lol
 
-            if (gameActions.Count == 0)
-            {
-                return;
-            }
-
-            else if (gameActions.Count > 0) //if there are actions...
+            if (gameActions.Count > 0) //if there are actions...
             {
                 GameAction mGameAction;
                 for (int i = 0; i < gameActions.Count; i++)
@@ -219,6 +186,32 @@ namespace RSU_Server
                 }
 
                 //more code
+            }
+
+            List<int> removeBlobs = new List<int>();
+            if (blobIDPairs.Count > 0)  //this should be in it's own frame
+            {
+                foreach (KeyValuePair<int, Blob> mBlobPair in blobIDPairs)
+                {
+                    if (mBlobPair.Value.Move())
+                    {
+                        removeBlobs.Add(mBlobPair.Key);
+                        nodes[mBlobPair.Value.path[mBlobPair.Value.index]].teamDictionary[mBlobPair.Value.team].troops += mBlobPair.Value.troops;
+                    }
+
+                    //for the morning
+
+                    //iterate through each blob and run the move script,
+                    //a boolean will return true if the destination has been reached
+                    //in that case add the blob to an int list for removal and for each of the blobs, increase the troop numbers of the city the blob is destined to
+                    //remove pairs
+                    //and yea
+                }
+
+                for (int i = 0; i < removeBlobs.Count; i++)
+                {
+                    blobIDPairs.Remove(removeBlobs[i]);
+                }
             }
 
             //update troops

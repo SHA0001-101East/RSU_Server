@@ -16,6 +16,8 @@ namespace RSU_Server
 
         ulong verificationKey = 17439573912022222222;
 
+        public DateTime timeOut_initialTime;
+
         public Client(Socket socket1, int index)
         {
             socket = socket1;
@@ -26,31 +28,31 @@ namespace RSU_Server
         {
             dataHandler.BeginReceiveData();
         }
-        public void SendData(int id, byte[] bytes)
+        public void SendData(byte[] bytes)
         {
-            List<byte> byteList = new List<byte>();
-            byteList.AddRange(BitConverter.GetBytes(id));
-            byteList.AddRange(BitConverter.GetBytes(bytes.Length));
-            byteList.AddRange(bytes);
-
-            byte[] byteArray = byteList.ToArray();
-            socket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
+            socket.BeginSend(bytes, 0, bytes.Length, SocketFlags.None, null, null);
         }
 
         public void AcknowledgeVerification()
         {
-            int id = 2;
-            SendData(id, new byte[0]);
+            using Packet packet = new Packet();
+            SendData(packet.GetBytes(Server.Server_AckVerfication));
         }
 
         public void DisconnectClient()
         {
-
+            //this is actual garbage code i have no idea what i am doing
+            //i am simply exerting all forms of destruction upon my poor socket
+            socket.Shutdown(SocketShutdown.Both);
+            socket.Disconnect(false);
+            socket.Close();
+            socket.Dispose();
         }
 
-        public void SendOtherPlayerData()
+        public void SendOtherPlayerData() //--------------------------------------------fix this-------------------------------------------------------------//
         {
-            int id = 4; //id for sending other player data;
+            using Packet packet = new Packet();
+
             List<byte> bytes = new List<byte>();
             Client[] clients;
 
@@ -63,65 +65,72 @@ namespace RSU_Server
             {
                 if (clients[i] != null)
                 {
-                    bytes.AddRange(BitConverter.GetBytes(Encoding.ASCII.GetByteCount(clients[i].name))); //gets name length
-                    bytes.AddRange(Encoding.ASCII.GetBytes(clients[i].name)); //gets name
-                    bytes.AddRange(BitConverter.GetBytes(clients[i].id)); //gets client's id
+                    packet.WriteString(clients[i].name); //writes clients name
+                    packet.WriteInt(clients[i].id); //writes client's id
                 }
             }
 
-            bytes.AddRange(BitConverter.GetBytes(Server.maxClients)); //sends max number of players
-            bytes.AddRange(BitConverter.GetBytes(this.id)); //gives the player his/her/it/they/them/xe/xae/zum ID
-            SendData(id, bytes.ToArray());
+            packet.WriteInt(Server.maxClients); //sends max number of players
+            packet.WriteInt(this.id); //gives the player his/her/it/they/them/xe/xae/zum ID
+            SendData(packet.GetBytes(Server.Server_PlayersInfo));
         }
 
-        public void SendSpawnInt(int spawnInt)
+        public void SendSpawnInt(int spawnInt) //--------------------fix this spawn ID rubbish
         {
-            int id = 9; //id for sending spawn
-            List<byte> bytes = new List<byte>();
-            bytes.AddRange(BitConverter.GetBytes(spawnInt));
-            SendData(id, bytes.ToArray());
+            using Packet packet = new Packet();
+
+            packet.WriteInt(spawnInt);
+            SendData(packet.GetBytes(Server.Server_SpawnInt));
         }
 
         public void SendMapData()
         {
-            List<byte> bytes = new List<byte>();
+            //this code needs to be changed
+            //nah this code is fine
 
-            GameObject[] nodes = game.nodes;
+            using Packet packet = new Packet();
+
+            Node[] nodes = Server.game.nodes;
             for (int i = 0; i < nodes.Length; i++)
             {
-                Vector3 vector3 = nodes[i].transform.position;
-                bytes.AddRange(BitConverter.GetBytes(vector3.x));
-                bytes.AddRange(BitConverter.GetBytes(vector3.y));
-                bytes.AddRange(BitConverter.GetBytes(vector3.z));
-                bytes.AddRange(BitConverter.GetBytes(nodes[i].GetComponent<Node>().nodeTeam));
+                Vector3 position = nodes[i].position;
+                packet.WriteFloat(position.x);
+                packet.WriteFloat(position.y);
+                packet.WriteFloat(position.z);
+                packet.WriteInt(nodes[i].CurrentTeam());
             }
 
-            SendData(6, bytes.ToArray());
-            Console.WriteLine("Map data sent. " + bytes.Count.ToString() + " bytes. Has been sent to client no. " + id);
+            SendData(packet.GetBytes(Server.Server_SendMap));
+            Console.WriteLine("Map data sent. " + packet.Length() + " bytes. Has been sent to client no. " + id);
+            
         }
 
-        public void SendMessageAcross(string name, string message)
+        public void SendMessage(string name, string message)
         {
+            using Packet packet = new Packet();
+
             Client[] clients;
             lock (Server.clients) // you know the deal
             {
                 clients = Server.clients;
             }
 
-            List<byte> bytes = new List<byte>();
-            bytes.AddRange(BitConverter.GetBytes(Encoding.ASCII.GetByteCount(name)));
-            bytes.AddRange(Encoding.ASCII.GetBytes(name));
-            bytes.AddRange(BitConverter.GetBytes(Encoding.ASCII.GetByteCount(message)));
-            bytes.AddRange(Encoding.ASCII.GetBytes(message));
+            packet.WriteString(name);
+            packet.WriteString(message);
 
             for (int i = 0; i < clients.Length; i++)
             {
-                if (clients[i] != null && clients[i].id != id) { clients[i].SendData(7, bytes.ToArray()); }
+                if (clients[i] != null && clients[i].id != id)
+                {
+                    clients[i].SendData(packet.GetBytes(Server.All_Message));
+                }
             }
         }
 
         public void ProcessData(int id, int length, List<byte> bytes)
         {
+            using Packet packet = new Packet(bytes);
+
             switch (id)
             {
                 case 0:
@@ -130,96 +139,59 @@ namespace RSU_Server
                         break;
                     }
 
-                case 1: //check verification key
+                case Server.Client_Token: //check verification key
                     {
-                        byte[] dataBytes = new byte[length];
-
-                        bytes.CopyTo(0, dataBytes, 0, length);
-                        bytes.RemoveRange(0, length);
-                        bytes.TrimExcess();
-                        ulong key = BitConverter.ToUInt64(dataBytes, 0);
-
+                        ulong key = packet.ReadULong();
                         if (key == verificationKey) { AcknowledgeVerification(); }
-
                         else { DisconnectClient(); }
-
-
-                        if (id == 2) { Console.WriteLine("Data type only for clients."); } //probably should disconnect client
                         break;
                     }
 
-                case 3:
+                case Server.Client_Name: //player name
                     {
-                        byte[] dataBytes = new byte[length];
-
-                        bytes.CopyTo(0, dataBytes, 0, length);
-                        bytes.RemoveRange(0, length);
-                        bytes.TrimExcess();
-                        name = Encoding.ASCII.GetString(dataBytes);
+                        name = packet.ReadString();
                         SendOtherPlayerData();
-
-                        //TODO: Send other player data about client.
-
                         Console.WriteLine("Client name recieved: " + name);
                         break;
                     }
 
-                case 5: //send map packet
+                case Server.Client_RequestMap: //send map packet
                     {
                         Console.WriteLine("Player has asked for map data.");
                         SendMapData();
                         break;
                     }
 
-                case 7:
+                case Server.All_Message:
                     {
                         Console.WriteLine("Message Recieved. Processing Message.");
                         Console.WriteLine(bytes.Count.ToString());
 
-                        string name;
-                        string message;
+                        string name = packet.ReadString();
+                        string message = packet.ReadString();
 
-                        byte[] dataBytes = new byte[4];
-
-                        bytes.CopyTo(0, dataBytes, 0, 4);
-                        bytes.RemoveRange(0, 4);
-                        int nameLength = BitConverter.ToInt32(dataBytes, 0);
-
-                        dataBytes = new byte[nameLength];
-                        bytes.CopyTo(0, dataBytes, 0, nameLength);
-                        bytes.RemoveRange(0, nameLength);
-                        name = Encoding.ASCII.GetString(dataBytes);
-
-                        dataBytes = new byte[4];
-                        bytes.CopyTo(0, dataBytes, 0, 4);
-                        bytes.RemoveRange(0, 4);
-                        int messageLength = BitConverter.ToInt32(dataBytes, 0);
-
-                        dataBytes = new byte[messageLength];
-                        bytes.CopyTo(0, dataBytes, 0, messageLength);
-                        bytes.RemoveRange(0, messageLength);
-                        message = Encoding.ASCII.GetString(dataBytes);
-
-                        SendMessageAcross(name, message);
+                        SendMessage(name, message);
                         break;
                     }
 
-                case 8:
+                /*case 8: //edit this later
                     {
                         Console.WriteLine("Client has asked for game data.");
                         int spawnInt = 5 * (this.id + 1);
                         if (Server.inGame) { Server.game.Spawn(spawnInt, this.id + 2); SendSpawnInt(spawnInt); }  //make it so that in the future, if we are in game then player is a spectator
                         if (!Server.inGame) { Server.game.Spawn(spawnInt, this.id + 2); SendSpawnInt(spawnInt); } //spawn player.
                         break;
-                    }
+                    }*/
 
                 default:
                     {
                         Console.WriteLine("Data type only for clients.");
-                        //disconnect client
-                        break;
+                        //disconnect client maybe
+                        return;
                     }
             }
+
+            timeOut_initialTime = DateTime.Now;
         }
 
     }

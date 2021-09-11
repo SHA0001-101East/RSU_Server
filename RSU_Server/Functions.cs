@@ -6,7 +6,7 @@ namespace RSU_Server
 {
     public static class Functions
     {
-        static Random random = new Random();
+        private static readonly Random random = new Random();
 
         public static float Range(int range)
         {
@@ -29,9 +29,9 @@ namespace RSU_Server
 
     public class Vector3
     {
-        float x;
-        float y;
-        float z;
+        public float x;
+        public float y;
+        public float z;
 
         public Vector3(float i, float j, float k)
         {
@@ -60,11 +60,33 @@ namespace RSU_Server
             Vector3 vector3 = new Vector3(v.x * k, v.y * k, v.z * k);
             return vector3;
         }
+        public static Vector3 operator /(Vector3 v, int k)
+        {
+            Vector3 vector3 = new Vector3(v.x / k, v.y / k, v.z / k);
+            return vector3;
+        }
+
+        public static Vector3 operator /(Vector3 v, float k)
+        {
+            Vector3 vector3 = new Vector3(v.x / k, v.y / k, v.z / k);
+            return vector3;
+        }
 
         public static float Distance(Vector3 u, Vector3 v)
         {
             float value = (float)Math.Sqrt((u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y) + (u.z - v.z) * (u.z - v.z));
             return value;
+        }
+
+        public float Magnitude()
+        {
+            float value = (float)Math.Sqrt(x*x + y*y + z*z);
+            return value;
+        }
+
+        public Vector3 Normalized()
+        {
+            return this / Magnitude();
         }
     }
 }
