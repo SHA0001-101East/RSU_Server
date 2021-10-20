@@ -1,0 +1,14 @@
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.csproj.AssemblyReference.cache
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.AssemblyInfoInputs.cache
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.AssemblyInfo.cs
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.csproj.CoreCompileInputs.cache
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\bin\Debug\netcoreapp3.1\RSU_Server.exe
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\bin\Debug\netcoreapp3.1\RSU_Server.deps.json
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\bin\Debug\netcoreapp3.1\RSU_Server.runtimeconfig.json
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\bin\Debug\netcoreapp3.1\RSU_Server.runtimeconfig.dev.json
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\bin\Debug\netcoreapp3.1\RSU_Server.dll
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\bin\Debug\netcoreapp3.1\RSU_Server.pdb
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.dll
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.pdb
+C:\Users\hassa\Desktop\RSU_Server\RSU_Server\obj\Debug\netcoreapp3.1\RSU_Server.genruntimeconfig.cache
